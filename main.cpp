@@ -7,5 +7,6 @@ using namespace std;
 
 int main(void)
 {
+//    doGetDeviceMac();
     return 0;
 }
