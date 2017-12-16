@@ -44,7 +44,7 @@ void doTCPServer() {
         return;
     }
 
-    if(listen(sock,10) ==SOCKET_ERROR){ //开始监听
+    if(listen(sock,10) == SOCKET_ERROR) { //开始监听
         printf("Listen failed:%d", WSAGetLastError());
         return;
     }
@@ -52,8 +52,7 @@ void doTCPServer() {
     SOCKADDR_IN addrClient;
     int len = sizeof(SOCKADDR);
 
-    while(1)
-    {
+    while(1) {
         //客户端连接
         SOCKET sockConn = accept(sock, (SOCKADDR *) &addrClient, &len);
         if(sockConn == SOCKET_ERROR){
@@ -73,15 +72,18 @@ void doTCPServer() {
         char recvBuf[100];
         memset(recvBuf, 0, sizeof(recvBuf));
 //      //接收数据
-        recv(sockConn, recvBuf, sizeof(recvBuf), 0);
-        printf("%s\n", recvBuf);
+        if ( recv(sockConn, recvBuf, sizeof(recvBuf), 0) == SOCKET_ERROR) {
+            cout<<"接受失败";
+        } else {
+            printf("%s\n", recvBuf);
+        }
 
         closesocket(sockConn);
     }
 
     closesocket(sock);
     WSACleanup();
-    system("pause");
 }
+
 
 #endif //NETCPP_TCP_CS_H
