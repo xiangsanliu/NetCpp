@@ -11,10 +11,20 @@
 
 using namespace std;
 
+bool loadWinsock() {
+    WSADATA wsadata;
+    return WSAStartup(MAKEWORD(2, 2), &wsadata) != 0;
+}
+
 void doTCPServer() {
 
     char send_char[1024];
     char received_char[1024];
+
+    if (loadWinsock()) {
+        cout<<"load winsock error"<<endl;
+        return;
+    }
 
     SOCKADDR_IN addr;
 
@@ -80,9 +90,17 @@ void doTCPClient() {
     char received_char[1024];
     char send_char[1024];
     char ip_address[30];
+
+    if (loadWinsock()) {
+        cout<<"load winsock error"<<endl;
+        return;
+    }
+
+    SOCKADDR_IN addr;
+
     cout<<"Input ip address: ";
     cin>>ip_address;
-    SOCKADDR_IN addr;
+
 
     addr.sin_addr.s_addr = inet_addr(ip_address);
     addr.sin_family = AF_INET;
@@ -91,7 +109,7 @@ void doTCPClient() {
     SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, 0);
 
     if (SOCKET_ERROR == connect(clientSocket, (SOCKADDR * ) & addr, sizeof(addr)) ){
-        cout<<"connect error"<<end;
+        cout<<"connect error"<<endl;
         return;
     }
 
@@ -110,7 +128,7 @@ void doTCPClient() {
     }
 
     closesocket(clientSocket);
-
+    WSACleanup();
 }
 
 #endif //NETCPP_TCP_CS_H
