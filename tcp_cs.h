@@ -13,77 +13,104 @@ using namespace std;
 
 void doTCPServer() {
 
-    u_short port = 5099;
-    char buf[] = "Server: hello, I am a server.....";
+    char send_char[1024];
+    char received_char[1024];
 
+    SOCKADDR_IN addr;
 
-    SOCKADDR_IN serv;
-
-    serv.sin_addr.S_un.S_addr = htonl(INADDR_ANY); //设定地址，INADDR_ANY代表由系统随机指定一块网卡地址
-    serv.sin_family = AF_INET;
-    serv.sin_port = htons(port); //htons 函数进行字节顺序交换
-
-    int addlen = sizeof(serv);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY); //设定地址，INADDR_ANY代表由系统随机指定一块网卡地址
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(5000); //htons 函数进行字节顺序交换
 
     //创建一个流套接字
-    SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+    SOCKET serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 
+    //将套接字sock和地址addr指定的网卡绑定在一起
 
-//    if (bind(sock, (sockaddr*) &serv, addlen)) {
-//        cout<<"绑定错误"<<endl;
-//    } else {
-//        cout<<"服务器创建成功"<<endl;
-//        listen(sock, 5);
-//    }
-
-    //将套接字sock和地址serv指定的网卡绑定在一起
-    int retVal = bind(sock, (LPSOCKADDR)&serv, sizeof(SOCKADDR_IN));
-
-    if(retVal == SOCKET_ERROR){     //绑定出错
-        printf("Failed bind:%d\n", WSAGetLastError());
+    if(SOCKET_ERROR == bind(serverSocket, (SOCKADDR *)&addr, sizeof(SOCKADDR_IN))){     //绑定出错
+        cout<<"bind error"<<endl;
         return;
     }
 
-    if(listen(sock,10) == SOCKET_ERROR) { //开始监听
-        printf("Listen failed:%d", WSAGetLastError());
+    if(listen(serverSocket,10) == SOCKET_ERROR) { //开始监听
+        cout<<"listen error"<<endl;
         return;
     }
 
     SOCKADDR_IN addrClient;
-    int len = sizeof(SOCKADDR);
+    int len = sizeof(addrClient);
 
     while(1) {
         //客户端连接
-        SOCKET sockConn = accept(sock, (SOCKADDR *) &addrClient, &len);
-        if(sockConn == SOCKET_ERROR){
-            printf("Accept failed:%d", WSAGetLastError());
+        SOCKET clientSocket = accept(serverSocket, (SOCKADDR *) &addrClient, &len);
+        if (SOCKET_ERROR == clientSocket) {
+            cout<<"accept error"<<endl;
             break;
         }
 
-        printf("Accept client IP:[%s]\n", inet_ntoa(addrClient.sin_addr));
+        cout<<"accept success: "<<inet_ntoa(addrClient.sin_addr);
 
+        cout<<"Input data: ";
+        cin>>send_char;
+        
         //发送数据
-        int iSend = send(sockConn, buf, sizeof(buf) , 0);
-        if(iSend == SOCKET_ERROR){
-            printf("send failed");
+        if(SOCKET_ERROR == send(clientSocket, send_char, sizeof(send_char), 0)){
+            printf("send error");
             break;
         }
 
-        char recvBuf[100];
-        memset(recvBuf, 0, sizeof(recvBuf));
-//      //接收数据
-        if ( recv(sockConn, recvBuf, sizeof(recvBuf), 0) == SOCKET_ERROR) {
-            cout<<"接受失败";
-        } else {
-            printf("%s\n", recvBuf);
+        memset(received_char, 0, sizeof(received_char));
+        
+        if ( recv(clientSocket, received_char, sizeof(received_char), 0) == SOCKET_ERROR) {
+            cout<<"receive error"<<endl;
+            break;
         }
 
-        closesocket(sockConn);
+        cout<<"received data:"<<received_char<<endl;
+
+        closesocket(clientSocket);
     }
 
-    closesocket(sock);
+    closesocket(serverSocket);
     WSACleanup();
 }
 
+void doTCPClient() {
+
+    char received_char[1024];
+    char send_char[1024];
+    char ip_address[30];
+    cout<<"Input ip address: ";
+    cin>>ip_address;
+    SOCKADDR_IN addr;
+
+    addr.sin_addr.s_addr = inet_addr(ip_address);
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(5000);
+
+    SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (SOCKET_ERROR == connect(clientSocket, (SOCKADDR * ) & addr, sizeof(addr)) ){
+        cout<<"connect error"<<end;
+        return;
+    }
+
+    if (SOCKET_ERROR == recv(clientSocket, received_char, sizeof(received_char), 0)) {
+        cout << "receive error"<<endl;
+        return;
+    }
+
+    cout<<"recevied data:"<<received_char<<endl;
+    cout<<"Input send data: ";
+    cin>>send_char;
+
+    if (SOCKET_ERROR == send(clientSocket, send_char, sizeof(send_char), 0)) {
+        cout << "send error"<<endl;
+        return;
+    }
+
+    closesocket(clientSocket);
+
+}
 
 #endif //NETCPP_TCP_CS_H
