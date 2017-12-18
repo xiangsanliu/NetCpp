@@ -8,13 +8,9 @@
 #include <winsock2.h>
 #include <cstdio>
 #include <iostream>
+#include "tool.h"
 
 using namespace std;
-
-bool loadWinsock() {
-    WSADATA wsadata;
-    return WSAStartup(MAKEWORD(2, 2), &wsadata) != 0;
-}
 
 void doTCPServer() {
     char send_char[1024];

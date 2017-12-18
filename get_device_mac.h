@@ -9,22 +9,6 @@
 #include <WinSock2.h>
 #include <cstdio>
 
-void CheckIP(void) {
-    WSADATA wsaData;
-    char name[155];
-    char *ip;
-    PHOSTENT hostinfo;
-    if (WSAStartup(MAKEWORD(2, 0), &wsaData) == 0) {
-        if (gethostname(name, sizeof(name)) == 0) {
-            if ((hostinfo = gethostbyname(name)) != NULL) {
-                ip = inet_ntoa(*(struct in_addr *)*hostinfo->h_addr_list);
-                printf("IPµÿ÷∑: %s ", ip);
-            }
-        }
-        WSACleanup();
-    }
-}
-
 int getMAC(char * mac) {
     NCB ncb;
     typedef struct _ASTAT_ {
