@@ -3,5 +3,6 @@
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/get_device_mac.h" charset="GBK" />
     <file url="file://$PROJECT_DIR$/main.cpp" charset="GBK" />
+    <file url="file://$PROJECT_DIR$/ping_and_tracert.h" charset="GBK" />
   </component>
 </project>
