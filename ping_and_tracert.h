@@ -17,6 +17,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdio>
+#include <afxres.h>
 #include "tool.h"
 
 using namespace std;
@@ -77,11 +78,9 @@ bool decodeIcmpResponseTracert(char * pBuf, int iPacketSize, DECODE_RESULT & stD
     if (iPacketSize < (int) (iIpHeaderLen + sizeof(ICMP_HEADER))) {
         return false;
     }
-    cout<<"are you ok?"<<endl;
     //指针指向ICMP报文的首地址
     ICMP_HEADER * pIcmpHeader = (ICMP_HEADER *) (pBuf+iIpHeaderLen);
     USHORT usID, usSeqNo;
-    cout<<"are you ok?1"<<endl;
     //获得的数据包的type字段为ICMP_ECHO_REPLY, 即收到一个回显应答ICMP报文
     if (pIcmpHeader->type == ICMP_ECHO_REPLY) {
         usID = pIcmpHeader->id;
@@ -95,7 +94,6 @@ bool decodeIcmpResponseTracert(char * pBuf, int iPacketSize, DECODE_RESULT & stD
     } else
         return false;
 
-    cout<<"are you ok?2"<<endl;
     if (usID != GetCurrentProcessId() || usSeqNo != stDecodeResult.usSeqNo)
         return false;
 
@@ -103,10 +101,10 @@ bool decodeIcmpResponseTracert(char * pBuf, int iPacketSize, DECODE_RESULT & stD
     if (pIcmpHeader->type == ICMP_ECHO_REPLY || pIcmpHeader->type == ICMP_TIMEOUT) {
         stDecodeResult.dwIPaddr.s_addr = pIpHeader->sourceIP;
         stDecodeResult.dwRoundTripTime = GetTickCount() -stDecodeResult.dwRoundTripTime;
-        if (stDecodeResult.dwRoundTripTime)
-            cout<<setw(6)<<stDecodeResult.dwRoundTripTime<<"ms"<<flush;
-        else
-            cout<<setw(6)<<"<1"<<"ms"<<flush;
+//        if (stDecodeResult.dwRoundTripTime)
+//            cout<<setw(6)<<stDecodeResult.dwRoundTripTime<<"ms"<<flush;
+//        else
+//            cout<<setw(6)<<"<1"<<"ms"<<flush;
         return true;
     }
 
@@ -243,7 +241,7 @@ void doPing() {
 void doTracert() {
     loadWinsock();
     char ip[30];
-    cout<<"Ping:  ";
+    cout<<"Tracert to :  ";
     cin>>ip;
 
     //获取IP地址
@@ -266,21 +264,13 @@ void doTracert() {
     int iTimeout = DEF_ICMP_TIMEOUT;
     if (setsockopt(sockRow, SOL_SOCKET, SO_RCVTIMEO, (char *) &iTimeout, sizeof(iTimeout)) == SOCKET_ERROR) {
         cout<<"set parm error"<<endl;
-        closesocket(sockRow);
-        WSACleanup();
         return;
     }
-
     if (setsockopt(sockRow, SOL_SOCKET, SO_SNDTIMEO, (char *) &iTimeout, sizeof(iTimeout)) == SOCKET_ERROR) {
         cout<<"set parm error"<<endl;
-        closesocket(sockRow);
-        WSACleanup();
         return;
     }
-
-    //创建发送和接受缓冲区
     char icmpSendBuffer[DEF_ICMP_PACK_SIZE];
-    memset(icmpSendBuffer+ sizeof(ICMP_HEADER), 'E', DEF_ICMP_DATA_SIZE);
 
     //填充ICMP数据报各字段
     ICMP_HEADER *pIcmpHeader = (ICMP_HEADER*) icmpSendBuffer;
@@ -288,27 +278,24 @@ void doTracert() {
     pIcmpHeader->code = 0;
     pIcmpHeader->id = (USHORT) (GetCurrentProcessId());
 
-    //开始探测路由
-    DECODE_RESULT stDecodeResult;
-    BOOL bReachDestHost = FALSE;
-    USHORT usSeqNo = 0;
+    memset(icmpSendBuffer+ sizeof(ICMP_HEADER), 'E', DEF_ICMP_DATA_SIZE);
+
+    //循环发送4个请求会先icmp数据包
     int iTTL = 1;
-    int iMaxLoop = 30;
-
-
-    while (!bReachDestHost && iMaxLoop--) {
-        //设置IP数据报报头的ttl字段
+    bool isReach = false;
+    DECODE_RESULT stDecodeResult;
+    for (u_short i=0;!isReach && i<30; i++, iTTL++) {
         setsockopt(sockRow, IPPROTO_IP, IP_TTL, (char *) &iTTL, sizeof(iTTL));
-        cout<<setw(3)<<iTTL<<flush;
+        pIcmpHeader->seq = htons(i);
+        pIcmpHeader->cksum = 0;
+        pIcmpHeader->cksum = generateCheckSum((USHORT*) icmpSendBuffer, sizeof(ICMP_HEADER)+DEF_ICMP_DATA_SIZE);
 
-        ((ICMP_HEADER *) icmpSendBuffer)->seq = htons(usSeqNo++);
-        ((ICMP_HEADER *) icmpSendBuffer)->cksum = generateCheckSum((USHORT *) icmpSendBuffer, sizeof(ICMP_HEADER)+DEF_ICMP_DATA_SIZE);
 
-        stDecodeResult.usSeqNo = ((ICMP_HEADER *) icmpSendBuffer)->seq;
+        stDecodeResult.usSeqNo = i;
         stDecodeResult.dwRoundTripTime = GetTickCount();
 
         if (sendto(sockRow, icmpSendBuffer, sizeof(icmpSendBuffer)
-                , 0, (sockaddr *) &destSockAddr, sizeof(destSockAddr) )==SOCKET_ERROR) {
+                , 0, (sockaddr *) &destSockAddr, sizeof(destSockAddr)) == SOCKET_ERROR) {
             if (WSAGetLastError() == WSAEHOSTUNREACH) {
                 cout<<"host unreachable"<<endl;
                 exit(0);
@@ -319,30 +306,27 @@ void doTracert() {
         int iFromLen = sizeof(from);
         int iReadLen;
         while (1) {
-            iReadLen = recvfrom(sockRow, icmpRecvBuffer, MAX_ICMP_PACKET_SIZE
-                    , 0, (sockaddr *) &from, &iFromLen);
-            cout<<"iReadLen"<<iReadLen<<endl;
-            if (iReadLen!=SOCKET_ERROR) {
-                if (decodeIcmpResponseTracert(icmpRecvBuffer
-                        , sizeof(icmpRecvBuffer), stDecodeResult)) {
-                    if (stDecodeResult.dwIPaddr.s_addr == destSockAddr.sin_addr.s_addr)
-                        bReachDestHost = TRUE;
-                    cout<<"\t"<<inet_ntoa(stDecodeResult.dwIPaddr)<<endl;
-                    break;
+            iReadLen = recvfrom(sockRow, icmpRecvBuffer, MAX_ICMP_PACKET_SIZE, 0, (sockaddr *) &from, &iFromLen);
+            if (iReadLen != SOCKET_ERROR) {
+                //解码得到的数据包，如果解码正确则跳出接收循环发送下一个EchoRequest包
+                if (decodeIcmpResponseTracert(icmpRecvBuffer, iReadLen, stDecodeResult)) {
+                    if (stDecodeResult.dwIPaddr.S_un.S_addr == destSockAddr.sin_addr.S_un.S_addr) {
+                        cout<<(unsigned int) stDecodeResult.ttl<<'\t'<<stDecodeResult.dwRoundTripTime<<"ms"
+                            << '\t' << inet_ntoa(stDecodeResult.dwIPaddr) << endl;
+                        isReach = true;
+                        break;
+                    }
                 }
-                break;
             } else if (WSAGetLastError() == WSAETIMEDOUT) {
-                cout<<"time out"<<endl;
+                cout<<iTTL<<"\t"<<"time out"<<endl;
                 break;
             } else {
                 cout<<"unknown error"<<endl;
                 break;
             }
         }
-        iTTL ++;
 
     }
-
 
     cout<<endl<<"Ping complete."<<endl;
     closesocket(sockRow);
