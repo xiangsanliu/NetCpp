@@ -1,9 +1,9 @@
 
-#include "ping_and_tracert.h"
+//#include "ping_and_tracert.h"
+
+#include "dns_server.h"
 
 int main(void) {
-//    doSome();
-    doTracert();
-//    doPing();
+    doDNS();
     return 0;
 }
