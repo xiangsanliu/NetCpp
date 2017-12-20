@@ -6,7 +6,6 @@
 #define NETCPP_NDS_SERVER_H
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <iostream>
 #include <winsock2.h>
 #include <Iphlpapi.h>
@@ -127,6 +126,8 @@ void decodeDNSPacket(char * DNSServBuff) {
         while (*pTraceResponse) {
             pTraceResponse++;
         }
+
+        pTraceResponse ++;
         pTraceResponse += sizeof(long);
         in_addr address;
         PRESPONSE  presponse ;
@@ -185,8 +186,7 @@ int  doDNS() {
 
     ListenSocket = socket(PF_INET , SOCK_DGRAM , 0) ;
     if(ListenSocket == INVALID_SOCKET) {
-        printf("Error : socket create failed ! \n") ;
-        fflush(0) ;
+        cout<<"socket create error"<<endl;
         return 0 ;
     }
 
@@ -194,10 +194,8 @@ int  doDNS() {
     addr.sin_addr.s_addr = htonl(INADDR_ANY) ; //任何地址
     addr.sin_port = htons(PORT) ;
     //进行监听端口的绑定
-    if(bind(ListenSocket , (struct sockaddr*)&addr , sizeof(addr)) != 0)
-    {
-        printf("Error : bind failed !\n") ;
-        fflush(0) ;
+    if(bind(ListenSocket , (struct sockaddr*)&addr , sizeof(addr)) != 0) {
+        cout<<"bind error"<<endl;
         closesocket(ListenSocket) ;
         return 0 ;
     }
@@ -207,39 +205,35 @@ int  doDNS() {
     int sent ;
     hostent *hostdata ;
 
-    cout<<dnsip;
+    cout<<"dns server ip: "<<dnsip<<endl;
     if(atoi(dnsip)) {    //是否为IP地址的标准形式
         u_long ip = inet_addr(dnsip) ;
         hostdata = gethostbyaddr((char*)&ip , sizeof(ip) , PF_INET) ;
-        cout<<"atoi"<<endl;
     } else {
-        printf("The DNS IP is not correct ! \n") ;
+        cout<< "dns server ip is not correct"<<endl;
         return 0 ;
     }
     if(!hostdata) {
-        printf("Get the name error ! \n") ;
-        fflush(0) ;
+        cout<<"get name error"<<endl;
         return 0 ;
     }
 
 
     sockaddr_in dest ; //填写目的地址信息
     dest.sin_family = PF_INET ;
-    //将hostent结构体里面的h_addr_list转化为in_addr类型的地址信息
-    dest.sin_addr = *(in_addr*)(hostdata->h_addr_list[0]) ;
+    dest.sin_addr = *(in_addr*)(hostdata->h_addr_list[0]) ; //将hostent结构体里面的h_addr_list转化为in_addr类型的地址信息
     dest.sin_port = htons(PORT) ;
 
     //获取DNS报文
     char hostname[30] , buffer[100] ;
     DNSHDR dnsHdr ;
     QUERYHDR queryHdr ;
-    printf("Please input domain name (no more than 30) : ") ;
-    scanf("%s" , hostname) ;
+    cout<<"input hostname: ";
+    cin>>hostname;
     len = genDNSPack(&dnsHdr , &queryHdr , hostname , buffer) ;
     sent = sendto(ListenSocket , buffer , len , 0 , (sockaddr*)&dest , sizeof(sockaddr_in)) ;
     if(sent != len) {
-        printf("Error : send error !\n") ;
-        fflush(0) ;
+        cout<<"send data error"<<endl;
         return 0 ;
     }
 
@@ -250,8 +244,7 @@ int  doDNS() {
     int result ;
     while(1) { //接收到数据时退出
         result = recvfrom(ListenSocket , buf , sizeof(buf) - 1 , 0 , (sockaddr*)&dnsServer , &addr_len) ;
-        if(result > 0)
-        {
+        if(result > 0) {
             buf[result] = 0 ;
             decodeDNSPacket(buf) ;
             break ;
