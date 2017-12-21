@@ -4,6 +4,7 @@
 
 #ifndef NETCPP_PING_AND_TRACERT_H
 #define NETCPP_PING_AND_TRACERT_H
+
 #define ICMP_ECHO_REQUEST 8 //回显请求类型
 #define DEF_ICMP_DATA_SIZE 20 //发送数据长度
 #define DEF_ICMP_PACK_SIZE 32 //数据包长度
@@ -21,7 +22,6 @@
 #include "tool.h"
 
 using namespace std;
-
 
 //定义ICMP报头
 typedef struct {
@@ -101,10 +101,6 @@ bool decodeIcmpResponseTracert(char * pBuf, int iPacketSize, DECODE_RESULT & stD
     if (pIcmpHeader->type == ICMP_ECHO_REPLY || pIcmpHeader->type == ICMP_TIMEOUT) {
         stDecodeResult.dwIPaddr.s_addr = pIpHeader->sourceIP;
         stDecodeResult.dwRoundTripTime = GetTickCount() -stDecodeResult.dwRoundTripTime;
-//        if (stDecodeResult.dwRoundTripTime)
-//            cout<<setw(6)<<stDecodeResult.dwRoundTripTime<<"ms"<<flush;
-//        else
-//            cout<<setw(6)<<"<1"<<"ms"<<flush;
         return true;
     }
 
@@ -209,7 +205,6 @@ void doPing() {
         int iReadLen;
         while (1) {
             iReadLen = recvfrom(sockRow, icmpRecvBuffer, MAX_ICMP_PACKET_SIZE, 0, (sockaddr *) &from, &iFromLen);
-            cout<<"iReadLen"<<iReadLen<<endl;
             if (iReadLen!=0) {
                 if (decodeIcmpResponsePing(icmpRecvBuffer, sizeof(icmpRecvBuffer), stDecodeResult)) {
                     cout<<"reply from: "<<inet_ntoa(stDecodeResult.dwIPaddr)
@@ -229,13 +224,9 @@ void doPing() {
 
     }
 
-
-
     cout<<endl<<"Ping complete."<<endl;
     closesocket(sockRow);
     WSACleanup();
-
-
 }
 
 void doTracert() {
@@ -331,8 +322,6 @@ void doTracert() {
     cout<<endl<<"Ping complete."<<endl;
     closesocket(sockRow);
     WSACleanup();
-
-
 }
 
 #endif //NETCPP_PING_AND_TRACERT_H
